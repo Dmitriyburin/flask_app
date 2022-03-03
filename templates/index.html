@@ -37,7 +37,7 @@
     {% if current_user.is_authenticated and current_user.id
         in [1, item.team_leader] %}
         <div class="flex change-tools">
-            <a class='btn btn-warning' href='/change_job/{{ item.id }}'>Edit Job</a>
+            <a class='btn btn-warning' href='/job/{{ item.id }}'>Edit Job</a>
             <a class='btn btn-danger' href='/delete_job/{{ item.id }}'>Delete Job</a>
         </div>
         

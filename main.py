@@ -1,11 +1,11 @@
 from flask import Flask, render_template, redirect, request, abort, url_for, make_response, jsonify
-from flask_login import LoginManager, login_user, login_required, logout_user, current_user
+from flask_login import LoginManager, login_user, login_required, logout_user, current_user, AnonymousUserMixin
 
 from forms.user import RegisterForm, LoginForm
 from forms.job import JobForm
 from data.users import User
 from data.jobs import Jobs
-from data import db_session, jobs_api
+from data import db_session, jobs_api, user_api
 
 app = Flask(__name__)
 login_manager = LoginManager()
@@ -34,6 +34,7 @@ def logout():
 def main():
     db_session.global_init("db/lesson.db")
     app.register_blueprint(jobs_api.blueprint)
+    app.register_blueprint(user_api.blueprint)
     app.run(debug=True)
 
 
@@ -46,44 +47,50 @@ def index():
     return render_template("index.html", jobs=jobs, url_style=url_style)
 
 
-@app.route("/change_job/<job_id>", methods=['GET', 'POST'])
-def change_job(job_id):
+@app.route("/job/<job_id>", methods=['GET', 'POST'])
+def job(job_id):
     url_style = url_for('static', filename='css/style.css')
-
     form = JobForm()
 
-    db_sess = db_session.create_session()
-    print(form.validate_on_submit())
-    if form.validate_on_submit()\
-            and (current_user.is_authenticated and current_user.id
-                 in [1, db_sess.query(Jobs).filter(Jobs.id == job_id).first().team_leader]):
-        job = db_sess.query(Jobs).filter(Jobs.id == job_id).first()
-        job.job = form.job.data
-        job.work_size = form.work_size.data
-        job.collaborators = form.collaborators.data
-        job.is_finished = form.is_finished.data
+    if request.method == "GET":
+        db_sess = db_session.create_session()
+        jobs = db_sess.query(Jobs).filter(Jobs.id == job_id, Jobs.team_leader.in_([current_user.id, 1])).first()
+        if jobs:
+            form.job.data = jobs.job
+            form.work_size.data = jobs.work_size
+            form.collaborators.data = jobs.collaborators
+            form.is_finished.data = jobs.is_finished
+        else:
+            abort(404)
 
+    if form.validate_on_submit():
+        db_sess = db_session.create_session()
+        jobs = db_sess.query(Jobs).filter(Jobs.id == job_id, Jobs.team_leader.in_([current_user.id, 1])).first()
+        if jobs:
+            jobs.job = form.job.data
+            jobs.work_size = form.work_size.data
+            jobs.collaborators = form.collaborators.data
+            jobs.is_finished = form.is_finished.data
+        else:
+            abort(404)
         db_sess.commit()
         return redirect('/')
 
-    job = db_sess.query(Jobs).filter(Jobs.id == job_id).first()
-    return render_template("change_job.html", url_style=url_style, form=form, job=job)
+    return render_template("job.html", url_style=url_style, form=form)
 
 
-@app.route("/delete_job/<job_id>", methods=['GET', 'POST'])
+@app.route("/delete_job/<int:job_id>", methods=['GET', 'POST'])
 def delete_job(job_id):
-    url_style = url_for('static', filename='css/style.css')
-
     db_sess = db_session.create_session()
-    if current_user.is_authenticated and current_user.id in\
-            [1, db_sess.query(Jobs).filter(Jobs.id == job_id).first().team_leader]:
-        job = db_sess.query(Jobs).filter(Jobs.id == job_id).first()
-        db_sess.delete(job)
-        db_sess.commit()
+    if not isinstance(current_user, AnonymousUserMixin):
+        job = db_sess.query(Jobs).filter(Jobs.id == job_id, Jobs.team_leader == current_user.id).first()
+        if job:
+            db_sess.delete(job)
+            db_sess.commit()
+        else:
+            abort(404)
 
-        return redirect('/')
-    jobs = db_sess.query(Jobs).all()
-    return render_template("index.html", jobs=jobs, url_style=url_style)
+    return redirect('/')
 
 
 @app.route("/add_job", methods=['GET', 'POST'])
@@ -107,7 +114,7 @@ def add_job():
 
         return redirect('/')
 
-    return render_template("add_change_job.html", url_style=url_style, form=form)
+    return render_template("job.html", url_style=url_style, form=form)
 
 
 @app.route('/register', methods=['GET', 'POST'])
