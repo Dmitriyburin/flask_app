@@ -1,16 +1,18 @@
 from flask import Flask, render_template, redirect, request, abort, url_for, make_response, jsonify
 from flask_login import LoginManager, login_user, login_required, logout_user, current_user, AnonymousUserMixin
+from flask_restful import Api
 
 from forms.user import RegisterForm, LoginForm
 from forms.job import JobForm
 from data.users import User
 from data.jobs import Jobs
-from data import db_session, jobs_api, user_api
+from data import db_session, jobs_api, user_api, users_resources
 
 app = Flask(__name__)
 login_manager = LoginManager()
 login_manager.init_app(app)
 app.config['SECRET_KEY'] = 'yandexlyceum_secret_key'
+api = Api(app)
 
 
 @login_manager.user_loader
@@ -35,6 +37,8 @@ def main():
     db_session.global_init("db/lesson.db")
     app.register_blueprint(jobs_api.blueprint)
     app.register_blueprint(user_api.blueprint)
+    api.add_resource(users_resources.UsersListResource, '/api/v2/users')
+    api.add_resource(users_resources.UsersResource, '/api/v2/users/<int:user_id>')
     app.run(debug=True)
 
 
