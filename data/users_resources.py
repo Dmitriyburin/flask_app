@@ -4,7 +4,7 @@ from flask_restful import abort, Resource
 from . import db_session
 from .news import News
 from .users import User
-from .reqparse import parser
+from .user_reqparse import parser
 
 
 def abort_if_user_not_found(user_id):

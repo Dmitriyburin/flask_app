@@ -6,7 +6,7 @@ from forms.user import RegisterForm, LoginForm
 from forms.job import JobForm
 from data.users import User
 from data.jobs import Jobs
-from data import db_session, jobs_api, user_api, users_resources
+from data import db_session, jobs_api, user_api, users_resources, jobs_resources
 
 app = Flask(__name__)
 login_manager = LoginManager()
@@ -39,6 +39,9 @@ def main():
     app.register_blueprint(user_api.blueprint)
     api.add_resource(users_resources.UsersListResource, '/api/v2/users')
     api.add_resource(users_resources.UsersResource, '/api/v2/users/<int:user_id>')
+    api.add_resource(jobs_resources.JobsListResource, '/api/v2/jobs')
+    api.add_resource(jobs_resources.JobsResource, '/api/v2/jobs/<int:job_id>')
+
     app.run(debug=True)
 
 
