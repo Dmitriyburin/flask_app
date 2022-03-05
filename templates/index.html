@@ -10,7 +10,7 @@
     
     {% for item in jobs%}
     <table class="main-table">
-        <caption>Action # {{ item.id }}</caption>
+        <caption>Action # {{ loop.index }}</caption>
         <tbody>
             <tr>
                 <th class="main-th">Title of activity</th>
